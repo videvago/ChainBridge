@@ -85,7 +85,7 @@ func deployBridge(client *Client, chainID uint8, relayerAddrs []common.Address, 
 		return ZeroAddress, err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -102,12 +102,12 @@ func deployERC20Handler(client *Client, bridgeAddress common.Address) (common.Ad
 		return ZeroAddress, err
 	}
 
-	erc20HandlerAddr, tx, _, err := erc20Handler.DeployERC20Handler(client.Opts, client.Client, bridgeAddress, [][32]byte{}, []common.Address{}, []common.Address{})
+	erc20HandlerAddr, tx, _, err := erc20Handler.DeployERC20Handler(client.Opts, client.Client, bridgeAddress, [][32]byte{}, []common.Address{}, [][32]byte{})
 	if err != nil {
 		return ZeroAddress, err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -123,11 +123,11 @@ func deployERC721Handler(client *Client, bridgeAddress common.Address) (common.A
 		return ZeroAddress, err
 	}
 
-	erc721HandlerAddr, tx, _, err := erc721Handler.DeployERC721Handler(client.Opts, client.Client, bridgeAddress, [][32]byte{}, []common.Address{}, []common.Address{})
+	erc721HandlerAddr, tx, _, err := erc721Handler.DeployERC721Handler(client.Opts, client.Client, bridgeAddress, [][32]byte{}, []common.Address{}, [][32]byte{})
 	if err != nil {
 		return ZeroAddress, err
 	}
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -143,12 +143,12 @@ func deployGenericHandler(client *Client, bridgeAddress common.Address) (common.
 		return ZeroAddress, err
 	}
 
-	addr, tx, _, err := GenericHandler.DeployGenericHandler(client.Opts, client.Client, bridgeAddress, [][32]byte{}, []common.Address{}, [][4]byte{}, [][4]byte{})
+	addr, tx, _, err := GenericHandler.DeployGenericHandler(client.Opts, client.Client, bridgeAddress, [][32]byte{}, []common.Address{}, [][32]byte{})
 	if err != nil {
 		return ZeroAddress, err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return ZeroAddress, err
 	}

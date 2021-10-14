@@ -8,7 +8,7 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/types"
 )
 
-func InitializeChain(client *Client, relayers []types.AccountID, chains []msg.ChainId, resources map[msg.ResourceId]Method, threshold uint32) error {
+func InitializeChain(client *Client, relayers []types.AccountID, chains []msg.ChainId, resources map[msg.Bytes32]Method, threshold uint32) error {
 	calls := []types.Call{}
 
 	// Create AddRelayer calls

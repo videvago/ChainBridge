@@ -25,9 +25,6 @@ import (
 	"math/big"
 
 	bridge "github.com/ChainSafe/ChainBridge/bindings/Bridge"
-	erc20Handler "github.com/ChainSafe/ChainBridge/bindings/ERC20Handler"
-	erc721Handler "github.com/ChainSafe/ChainBridge/bindings/ERC721Handler"
-	"github.com/ChainSafe/ChainBridge/bindings/GenericHandler"
 	connection "github.com/ChainSafe/ChainBridge/connections/ethereum"
 	utils "github.com/ChainSafe/ChainBridge/shared/ethereum"
 	"github.com/ChainSafe/chainbridge-utils/blockstore"
@@ -61,11 +58,12 @@ type Connection interface {
 }
 
 type Chain struct {
-	cfg      *core.ChainConfig // The config of the chain
-	conn     Connection        // THe chains connection
-	listener *listener         // The listener of this chain
-	writer   *writer           // The writer of the chain
-	stop     chan<- int
+	cfg          *core.ChainConfig // The config of the chain
+	conn         Connection        // THe chains connection
+	listener     *listener         // The listener of this chain
+	writer       *writer           // The writer of the chain
+	manageWriter bool
+	stop         chan<- int
 }
 
 // checkBlockstore queries the blockstore for the latest known block. If the latest block is
@@ -146,21 +144,6 @@ func InitializeChain(chainCfg *core.ChainConfig, logger log15.Logger, sysErr cha
 		return nil, fmt.Errorf("chainId (%d) and configuration chainId (%d) do not match", chainId, chainCfg.Id)
 	}
 
-	erc20HandlerContract, err := erc20Handler.NewERC20Handler(cfg.erc20HandlerContract, conn.Client())
-	if err != nil {
-		return nil, err
-	}
-
-	erc721HandlerContract, err := erc721Handler.NewERC721Handler(cfg.erc721HandlerContract, conn.Client())
-	if err != nil {
-		return nil, err
-	}
-
-	genericHandlerContract, err := GenericHandler.NewGenericHandler(cfg.genericHandlerContract, conn.Client())
-	if err != nil {
-		return nil, err
-	}
-
 	if chainCfg.LatestBlock {
 		curr, err := conn.LatestBlock()
 		if err != nil {
@@ -170,18 +153,25 @@ func InitializeChain(chainCfg *core.ChainConfig, logger log15.Logger, sysErr cha
 	}
 
 	listener := NewListener(conn, cfg, logger, bs, stop, sysErr, m)
-	listener.setContracts(bridgeContract, erc20HandlerContract, erc721HandlerContract, genericHandlerContract)
+	listener.setContracts(bridgeContract)
 
 	writer := NewWriter(conn, cfg, logger, stop, sysErr, m)
 	writer.setContract(bridgeContract)
 
 	return &Chain{
-		cfg:      chainCfg,
-		conn:     conn,
-		writer:   writer,
-		listener: listener,
-		stop:     stop,
+		cfg:          chainCfg,
+		conn:         conn,
+		writer:       writer,
+		manageWriter: true,
+		listener:     listener,
+		stop:         stop,
 	}, nil
+}
+
+func (c *Chain) SetWriter(from *Chain) {
+	// Maybe have to clone from.writer ???
+	c.writer = from.writer
+	c.manageWriter = false
 }
 
 func (c *Chain) SetRouter(r *core.Router) {
@@ -195,12 +185,14 @@ func (c *Chain) Start() error {
 		return err
 	}
 
-	err = c.writer.start()
-	if err != nil {
-		return err
-	}
+	if c.manageWriter {
+		err = c.writer.start()
+		if err != nil {
+			return err
+		}
 
-	c.writer.log.Debug("Successfully started chain")
+		c.writer.log.Debug("Successfully started chain")
+	}
 	return nil
 }
 

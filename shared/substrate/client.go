@@ -65,7 +65,7 @@ func (c *Client) WhitelistChain(id msg.ChainId) error {
 	return SubmitSudoTx(c, WhitelistChainMethod, types.U8(id))
 }
 
-func (c *Client) RegisterResource(id msg.ResourceId, method string) error {
+func (c *Client) RegisterResource(id msg.Bytes32, method string) error {
 	log15.Info("Registering resource", "rId", id, "method", []byte(method))
 	return SubmitSudoTx(c, SetResourceMethod, types.NewBytes32(id), []byte(method))
 }
@@ -117,7 +117,7 @@ func (c *Client) NewWhitelistChainCall(id msg.ChainId) (types.Call, error) {
 	return c.NewSudoCall(call)
 }
 
-func (c *Client) NewRegisterResourceCall(id msg.ResourceId, method string) (types.Call, error) {
+func (c *Client) NewRegisterResourceCall(id msg.Bytes32, method string) (types.Call, error) {
 	call, err := types.NewCall(c.Meta, string(SetResourceMethod), id, method)
 	if err != nil {
 		return types.Call{}, err

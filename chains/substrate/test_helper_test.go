@@ -35,11 +35,11 @@ var relayers = []types.AccountID{
 	types.NewAccountID(BobKey.PublicKey),
 }
 
-var resources = map[msg.ResourceId]utils.Method{
+var resources = map[msg.Bytes32]utils.Method{
 	// These are taken from the Polkadot JS UI (Chain State -> Constants)
-	msg.ResourceIdFromSlice(hexutil.MustDecode("0x000000000000000000000000000000c76ebe4a02bbc34786d860b355f5a5ce00")): utils.ExampleTransferMethod,
-	msg.ResourceIdFromSlice(hexutil.MustDecode("0x000000000000000000000000000000e389d61c11e5fe32ec1735b3cd38c69501")): utils.ExampleMintErc721Method,
-	msg.ResourceIdFromSlice(hexutil.MustDecode("0x000000000000000000000000000000f44be64d2de895454c3467021928e55e01")): utils.ExampleRemarkMethod,
+	msg.Bytes32FromSlice(hexutil.MustDecode("0x000000000000000000000000000000c76ebe4a02bbc34786d860b355f5a5ce00")): utils.ExampleTransferMethod,
+	msg.Bytes32FromSlice(hexutil.MustDecode("0x000000000000000000000000000000e389d61c11e5fe32ec1735b3cd38c69501")): utils.ExampleMintErc721Method,
+	msg.Bytes32FromSlice(hexutil.MustDecode("0x000000000000000000000000000000f44be64d2de895454c3467021928e55e01")): utils.ExampleRemarkMethod,
 }
 
 const relayerThreshold = 2

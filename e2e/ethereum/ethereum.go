@@ -128,7 +128,7 @@ func CreateEthClient(t *testing.T, endpoint string, kp *secp256k1.Keypair) (*eth
 	return client, opts
 }
 
-func CreateErc20Deposit(t *testing.T, client *utils.Client, destId msg.ChainId, recipient []byte, amount *big.Int, contracts *utils.DeployedContracts, rId msg.ResourceId) {
+func CreateErc20Deposit(t *testing.T, client *utils.Client, destId msg.ChainId, executor []byte, recipient []byte, amount *big.Int, contracts *utils.DeployedContracts, rId msg.Bytes32) msg.Bytes32 {
 	data := utils.ConstructErc20DepositData(recipient, amount)
 
 	bridgeInstance, err := bridge.NewBridge(contracts.BridgeAddress, client.Client)
@@ -138,8 +138,9 @@ func CreateErc20Deposit(t *testing.T, client *utils.Client, destId msg.ChainId, 
 
 	tx, err := bridgeInstance.Deposit(
 		client.Opts,
+		[32]byte(rId),
 		uint8(destId),
-		rId,
+		executor,
 		data,
 	)
 
@@ -147,14 +148,15 @@ func CreateErc20Deposit(t *testing.T, client *utils.Client, destId msg.ChainId, 
 		t.Fatal(err)
 	}
 
-	err = utils.WaitForTx(client, tx)
+	_, err = utils.WaitForTx(client, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	// ToDo: search depositKey in Logs
+	return msg.Bytes32{}
 }
 
-func CreateErc721Deposit(t *testing.T, client *utils.Client, destId msg.ChainId, recipient []byte, tokenId *big.Int, contracts *utils.DeployedContracts, rId msg.ResourceId) {
+func CreateErc721Deposit(t *testing.T, client *utils.Client, destId msg.ChainId, executor []byte, recipient []byte, tokenId *big.Int, contracts *utils.DeployedContracts, rId msg.Bytes32) msg.Bytes32 {
 	data := utils.ConstructErc721DepositData(tokenId, recipient)
 
 	bridgeInstance, err := bridge.NewBridge(contracts.BridgeAddress, client.Client)
@@ -169,8 +171,9 @@ func CreateErc721Deposit(t *testing.T, client *utils.Client, destId msg.ChainId,
 
 	tx, err := bridgeInstance.Deposit(
 		client.Opts,
+		[32]byte(rId),
 		uint8(destId),
-		rId,
+		executor,
 		data,
 	)
 
@@ -178,13 +181,15 @@ func CreateErc721Deposit(t *testing.T, client *utils.Client, destId msg.ChainId,
 		t.Fatal(err)
 	}
 
-	err = utils.WaitForTx(client, tx)
+	_, err = utils.WaitForTx(client, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// ToDo: search depositKey in Logs
+	return msg.Bytes32{}
 }
 
-func CreateGenericDeposit(t *testing.T, client *utils.Client, destId msg.ChainId, metadata []byte, contracts *utils.DeployedContracts, rId msg.ResourceId) {
+func CreateGenericDeposit(t *testing.T, client *utils.Client, destId msg.ChainId, executor []byte, metadata []byte, contracts *utils.DeployedContracts, rId msg.Bytes32) msg.Bytes32 {
 	data := utils.ConstructGenericDepositData(metadata)
 
 	bridgeInstance, err := bridge.NewBridge(contracts.BridgeAddress, client.Client)
@@ -199,8 +204,9 @@ func CreateGenericDeposit(t *testing.T, client *utils.Client, destId msg.ChainId
 
 	tx, err := bridgeInstance.Deposit(
 		client.Opts,
+		[32]byte(rId),
 		uint8(destId),
-		rId,
+		executor,
 		data,
 	)
 
@@ -208,21 +214,28 @@ func CreateGenericDeposit(t *testing.T, client *utils.Client, destId msg.ChainId
 		t.Fatal(err)
 	}
 
-	err = utils.WaitForTx(client, tx)
+	_, err = utils.WaitForTx(client, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// ToDo: search depositKey in Logs
+	return msg.Bytes32{}
 }
 
-func WaitForProposalActive(t *testing.T, client *utils.Client, bridge common.Address, nonce uint64) {
+func WaitForProposalActive(t *testing.T, client *utils.Client, bridgeAddress common.Address, depositKey msg.Bytes32) {
 	startBlock := ethtest.GetLatestBlock(t, client)
 
 	query := eth.FilterQuery{
 		FromBlock: startBlock,
-		Addresses: []common.Address{bridge},
+		Addresses: []common.Address{bridgeAddress},
 		Topics: [][]common.Hash{
 			{utils.ProposalEvent.GetTopic()},
 		},
+	}
+
+	filterer, err := bridge.NewBridgeFilterer(bridgeAddress, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	ch := make(chan ethtypes.Log)
@@ -235,14 +248,17 @@ func WaitForProposalActive(t *testing.T, client *utils.Client, bridge common.Add
 	for {
 		select {
 		case evt := <-ch:
-			currentNonce := evt.Topics[2].Big()
-			status := uint8(evt.Topics[3].Big().Uint64())
+			logData, err := filterer.ParseProposalEvent(evt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evDepositKey := msg.Bytes32(evt.Topics[1])
 			// Check nonce matches
-			if utils.IsActive(status) && currentNonce.Cmp(big.NewInt(int64(nonce))) == 0 {
-				log.Info("Got matching ProposalCreated event, continuing...", "nonce", currentNonce, "topics", evt.Topics)
+			if utils.IsActive(logData.Status) && evDepositKey == depositKey {
+				log.Info("Got matching ProposalCreated event, continuing...", "depositKey", evDepositKey, "topics", evt.Topics)
 				return
 			} else {
-				log.Info("Incorrect ProposalCreated event", "nonce", currentNonce, "expectedNonce", nonce, "topics", evt.Topics)
+				log.Info("Incorrect ProposalCreated event", "depositKey", evDepositKey, "expectedKey", depositKey, "topics", evt.Topics)
 			}
 		case err := <-sub.Err():
 			if err != nil {
@@ -254,15 +270,20 @@ func WaitForProposalActive(t *testing.T, client *utils.Client, bridge common.Add
 	}
 }
 
-func WaitForProposalExecutedEvent(t *testing.T, client *utils.Client, bridge common.Address, nonce uint64) {
+func WaitForProposalExecutedEvent(t *testing.T, client *utils.Client, bridgeAddress common.Address, depositKey msg.Bytes32) {
 	startBlock := ethtest.GetLatestBlock(t, client)
 
 	query := eth.FilterQuery{
 		FromBlock: startBlock,
-		Addresses: []common.Address{bridge},
+		Addresses: []common.Address{bridgeAddress},
 		Topics: [][]common.Hash{
 			{utils.ProposalEvent.GetTopic()},
 		},
+	}
+
+	filterer, err := bridge.NewBridgeFilterer(bridgeAddress, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	ch := make(chan ethtypes.Log)
@@ -276,14 +297,17 @@ func WaitForProposalExecutedEvent(t *testing.T, client *utils.Client, bridge com
 	for {
 		select {
 		case evt := <-ch:
-			currentNonce := evt.Topics[2].Big()
-			status := uint8(evt.Topics[3].Big().Uint64())
+			logData, err := filterer.ParseProposalEvent(evt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evDepositKey := msg.Bytes32(evt.Topics[1])
 			// Check nonce matches
-			if utils.IsExecuted(status) && currentNonce.Cmp(big.NewInt(int64(nonce))) == 0 {
-				log.Info("Got matching ProposalExecuted event, continuing...", "nonce", currentNonce, "topics", evt.Topics)
+			if utils.IsExecuted(logData.Status) && evDepositKey == depositKey {
+				log.Info("Got matching ProposalExecuted event, continuing...", "depositKey", evDepositKey, "topics", evt.Topics)
 				return
 			} else {
-				log.Info("Incorrect ProposalExecuted event", "nonce", currentNonce, "expectedNonce", nonce, "topics", evt.Topics)
+				log.Info("Incorrect ProposalExecuted event", "depositKey", evDepositKey, "expectedKey", depositKey, "topics", evt.Topics)
 			}
 		case err := <-sub.Err():
 			if err != nil {

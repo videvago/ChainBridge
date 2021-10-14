@@ -82,7 +82,7 @@ func (c *Client) UnlockNonce() {
 
 // WaitForTx will query the chain at ExpectedBlockTime intervals, until a receipt is returned.
 // Returns an error if the tx failed.
-func WaitForTx(client *Client, tx *ethtypes.Transaction) error {
+func WaitForTx(client *Client, tx *ethtypes.Transaction) (*ethtypes.Receipt, error) {
 	retry := 10
 	for retry > 0 {
 		receipt, err := client.Client.TransactionReceipt(context.Background(), tx.Hash())
@@ -92,14 +92,14 @@ func WaitForTx(client *Client, tx *ethtypes.Transaction) error {
 				time.Sleep(ExpectedBlockTime)
 				continue
 			} else {
-				return err
+				return nil, err
 			}
 		}
 
 		if receipt.Status != 1 {
-			return fmt.Errorf("transaction failed on chain")
+			return nil, fmt.Errorf("transaction failed on chain")
 		}
-		return nil
+		return receipt, nil
 	}
-	return nil
+	return nil, nil
 }

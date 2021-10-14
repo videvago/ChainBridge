@@ -37,28 +37,34 @@ func WhitelistChain(t *testing.T, client *utils.Client, id msg.ChainId) {
 	}
 }
 
-func InitiateNativeTransfer(t *testing.T, client *utils.Client, amount types.U128, recipient []byte, destId msg.ChainId) {
+func InitiateNativeTransfer(t *testing.T, client *utils.Client, amount types.U128, recipient []byte, destId msg.ChainId) types.Bytes32 {
 	err := client.InitiateNativeTransfer(amount, recipient, destId)
 	if err != nil {
 		t.Fatal(err)
 	}
+	deployKey := types.Bytes32{} // ToDo call getDeployKey
+	return deployKey
 }
 
-func InitiateNonFungibleTransfer(t *testing.T, client *utils.Client, tokenId types.U256, recipient []byte, destId msg.ChainId) {
+func InitiateNonFungibleTransfer(t *testing.T, client *utils.Client, tokenId types.U256, recipient []byte, destId msg.ChainId) types.Bytes32 {
 	err := client.InitiateNonFungibleTransfer(tokenId, recipient, destId)
 	if err != nil {
 		t.Fatal(err)
 	}
+	deployKey := types.Bytes32{} // ToDo call getDeployKey
+	return deployKey
 }
 
-func InitiateHashTransfer(t *testing.T, client *utils.Client, hash types.Hash, destId msg.ChainId) {
+func InitiateHashTransfer(t *testing.T, client *utils.Client, hash types.Hash, destId msg.ChainId) types.Bytes32 {
 	err := client.InitiateHashTransfer(hash, destId)
 	if err != nil {
 		t.Fatal(err)
 	}
+	deployKey := types.Bytes32{} // ToDo call getDeployKey
+	return deployKey
 }
 
-func RegisterResource(t *testing.T, client *utils.Client, id msg.ResourceId, method string) {
+func RegisterResource(t *testing.T, client *utils.Client, id msg.Bytes32, method string) {
 	err := client.RegisterResource(id, method)
 	if err != nil {
 		t.Fatal(err)

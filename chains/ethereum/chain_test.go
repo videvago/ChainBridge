@@ -73,7 +73,8 @@ func TestChain_WriterShutdownOnFailure(t *testing.T) {
 	src := msg.ChainId(5) // Not yet used, nonce should be 0
 	dst := msg.ChainId(1)
 	amount := big.NewInt(10)
-	resourceId := msg.ResourceIdFromSlice(append(common.LeftPadBytes(erc20Contract.Bytes(), 31), uint8(src)))
+	resourceId := msg.Bytes32FromSlice(append(common.LeftPadBytes(erc20Contract.Bytes(), 31), uint8(src)))
+	depositKey := msg.Bytes32FromSlice(append(common.LeftPadBytes(erc20Contract.Bytes(), 31), uint8(0)))
 	recipient := ethcrypto.PubkeyToAddress(BobKp.PrivateKey().PublicKey)
 	ethtest.RegisterResource(t, client, contracts.BridgeAddress, contracts.ERC20HandlerAddress, resourceId, erc20Contract)
 
@@ -111,7 +112,8 @@ func TestChain_WriterShutdownOnFailure(t *testing.T) {
 	}
 
 	// Submit some messages
-	message := msg.NewFungibleTransfer(src, dst, 1, amount, resourceId, recipient.Bytes())
+	data := ConstructErc20ProposalData(amount.Bytes(), recipient.Bytes())
+	message := msg.NewGenericTransfer(src, dst, 1, depositKey, resourceId, data)
 
 	for i := 0; i < 5; i++ {
 		err = chain.listener.router.Send(message)

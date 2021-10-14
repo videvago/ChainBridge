@@ -13,3 +13,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
 )
+
+replace github.com/ChainSafe/chainbridge-utils => github.com/videvago/chainbridge-utils v1.0.7-0.20211013183002-ec607b648aa3
+replace github.com/ChainSafe/chainbridge-substrate-events => github.com/videvago/chainbridge-substrate-events v0.0.0-20211013182810-90287a752033

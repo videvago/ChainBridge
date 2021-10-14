@@ -103,7 +103,8 @@ func createErc20Deposit(
 	t *testing.T,
 	contract *Bridge.Bridge,
 	client *utils.Client,
-	rId msg.ResourceId,
+	rId msg.Bytes32,
+	executor common.Address,
 	destRecipient common.Address,
 	destId msg.ChainId,
 	amount *big.Int,
@@ -115,8 +116,9 @@ func createErc20Deposit(
 	client.Opts.Nonce = client.Opts.Nonce.Add(client.Opts.Nonce, big.NewInt(1))
 	if _, err := contract.Deposit(
 		client.Opts,
+		[32]byte(rId),
 		uint8(destId),
-		rId,
+		executor.Bytes(),
 		data,
 	); err != nil {
 		t.Fatal(err)
@@ -127,7 +129,8 @@ func createErc721Deposit(
 	t *testing.T,
 	bridge *Bridge.Bridge,
 	client *utils.Client,
-	rId msg.ResourceId,
+	rId msg.Bytes32,
+	executor common.Address,
 	destRecipient common.Address,
 	destId msg.ChainId,
 	tokenId *big.Int,
@@ -139,19 +142,20 @@ func createErc721Deposit(
 	client.Opts.Nonce = client.Opts.Nonce.Add(client.Opts.Nonce, big.NewInt(1))
 	if _, err := bridge.Deposit(
 		client.Opts,
+		[32]byte(rId),
 		uint8(destId),
-		rId,
+		executor.Bytes(),
 		data,
 	); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func createGenericDeposit(
+/*func createGenericDeposit(
 	t *testing.T,
 	bridge *Bridge.Bridge,
 	client *utils.Client,
-	rId msg.ResourceId,
+	rId msg.Bytes32,
 	destId msg.ChainId,
 	hash []byte) {
 
@@ -161,10 +165,8 @@ func createGenericDeposit(
 	client.Opts.Nonce = client.Opts.Nonce.Add(client.Opts.Nonce, big.NewInt(1))
 	if _, err := bridge.Deposit(
 		client.Opts,
-		uint8(destId),
-		rId,
 		data,
 	); err != nil {
 		t.Fatal(err)
 	}
-}
+}*/

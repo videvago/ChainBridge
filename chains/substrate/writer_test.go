@@ -57,11 +57,16 @@ func TestWriter_ResolveMessage_FungibleProposal(t *testing.T) {
 	getFreeBalance(context.writerBob.conn, &startingBalance)
 
 	// Setup message and params
-	var rId [32]byte
+	var rId message.Bytes32
+	depositKey := message.Bytes32FromSlice(make([]byte, 32))
+
 	subtest.QueryConst(t, context.client, "Example", "NativeTokenId", &rId)
 	// Construct the message to initiate a vote
 	amount := big.NewInt(10000000)
-	m := message.NewFungibleTransfer(ForeignChain, ThisChain, 0, amount, rId, context.writerBob.conn.key.PublicKey)
+	recipient := context.writerBob.conn.key.PublicKey
+
+	data := utils.ConstructErc20DepositData(recipient, amount)
+	m := message.NewGenericTransfer(ForeignChain, ThisChain, 0, depositKey, rId, data)
 	// Create a proposal to help us check results
 	prop, err := context.writerAlice.createFungibleProposal(m)
 	if err != nil {
@@ -118,12 +123,17 @@ func TestWriter_ResolveMessage_FungibleProposal(t *testing.T) {
 
 func TestWriter_ResolveMessage_NonFungibleProposal(t *testing.T) {
 	// Setup message and params
-	var rId [32]byte
+	var rId message.Bytes32
+	depositKey := message.Bytes32FromSlice(make([]byte, 32))
+
 	subtest.QueryConst(t, context.client, "Example", "Erc721Id", &rId)
 	// Construct the message to initiate a vote
 	tokenId := big.NewInt(10000000)
 	context.latestInNonce++
-	m := message.NewNonFungibleTransfer(ForeignChain, ThisChain, context.latestInNonce, rId, tokenId, context.writerBob.conn.key.PublicKey, []byte{})
+	recipient := context.writerBob.conn.key.PublicKey
+
+	data := utils.ConstructErc721DepositData(tokenId, recipient)
+	m := message.NewGenericTransfer(ForeignChain, ThisChain, context.latestInNonce, depositKey, rId, data)
 	// Create a proposal to help us check results
 	prop, err := context.writerAlice.createNonFungibleProposal(m)
 	if err != nil {
@@ -172,7 +182,7 @@ func TestWriter_ResolveMessage_NonFungibleProposal(t *testing.T) {
 	}
 }
 
-func TestWriter_ResolveMessage_GenericProposal(t *testing.T) {
+/*func TestWriter_ResolveMessage_GenericProposal(t *testing.T) {
 	var rId [32]byte
 	subtest.QueryConst(t, context.client, "Example", "HashId", &rId)
 	// Construct the message to initiate a vote
@@ -228,16 +238,21 @@ func TestWriter_ResolveMessage_GenericProposal(t *testing.T) {
 		t.Fatal(err)
 	default:
 	}
-}
+}*/
 
 func TestWriter_ResolveMessage_Duplicate(t *testing.T) {
 	// Setup message and params
-	var rId [32]byte
+	var rId message.Bytes32
+	depositKey := message.Bytes32FromSlice(make([]byte, 32))
+
 	subtest.QueryConst(t, context.client, "Example", "NativeTokenId", &rId)
 	// Construct the message to initiate a vote
 	amount := big.NewInt(10000000)
+	recipient := context.writerBob.conn.key.PublicKey
 	context.latestInNonce++
-	m := message.NewFungibleTransfer(ForeignChain, ThisChain, context.latestInNonce, amount, rId, context.writerBob.conn.key.PublicKey)
+
+	data := utils.ConstructErc20DepositData(recipient, amount)
+	m := message.NewGenericTransfer(ForeignChain, ThisChain, context.latestInNonce, depositKey, rId, data)
 	// Create a proposal to help us check results
 	prop, err := context.writerAlice.createFungibleProposal(m)
 	if err != nil {

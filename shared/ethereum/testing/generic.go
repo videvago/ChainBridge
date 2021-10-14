@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func AssertGenericResourceAddress(t *testing.T, client *utils.Client, handler common.Address, rId msg.ResourceId, expected common.Address) {
+func AssertGenericResourceAddress(t *testing.T, client *utils.Client, handler common.Address, rId msg.Bytes32, expected common.Address) {
 	actual, err := utils.GetGenericResourceAddress(client, handler, rId)
 	if err != nil {
 		t.Fatal(err)

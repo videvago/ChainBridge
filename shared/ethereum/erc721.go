@@ -24,7 +24,7 @@ func DeployErc721(client *Client) (common.Address, error) {
 		return ZeroAddress, err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -51,7 +51,7 @@ func Erc721Mint(client *Client, erc721Contract common.Address, id *big.Int, meta
 		return err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func ApproveErc721(client *Client, contractAddress, recipient common.Address, to
 		return err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func FundErc721Handler(client *Client, handlerAddress, erc721Address common.Addr
 		return err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func Erc721AddMinter(client *Client, erc721Contract common.Address, minter commo
 		return err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return err
 	}

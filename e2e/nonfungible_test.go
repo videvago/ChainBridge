@@ -11,6 +11,7 @@ import (
 	sub "github.com/ChainSafe/ChainBridge/e2e/substrate"
 	ethtest "github.com/ChainSafe/ChainBridge/shared/ethereum/testing"
 	subtest "github.com/ChainSafe/ChainBridge/shared/substrate/testing"
+	msg "github.com/ChainSafe/chainbridge-utils/msg"
 	log "github.com/ChainSafe/log15"
 	"github.com/centrifuge/go-substrate-rpc-client/types"
 )
@@ -23,7 +24,7 @@ func testErc721ToSubstrateRoundTrip(t *testing.T, ctx *testContext) {
 
 	ethtest.Erc721MintMany(t, ctx.ethA.Client, ctx.ethA.TestContracts.Erc721Sub, tokens)
 	ethtest.Erc721ApproveMany(t, ctx.ethA.Client, ctx.ethA.TestContracts.Erc721Sub, ctx.ethA.BaseContracts.ERC721HandlerAddress, tokens)
-	nonce := ethtest.GetDepositNonce(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress, SubChainId) + 1
+	//nonce := ethtest.GetDepositNonce(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress) + 1
 	for i := 1; i <= numberOfTxs; i++ {
 		i := i // for scope
 		ok := t.Run(fmt.Sprintf("Transfer %d", i), func(t *testing.T) {
@@ -34,11 +35,11 @@ func testErc721ToSubstrateRoundTrip(t *testing.T, ctx *testContext) {
 
 			// Initiate transfer
 			log.Info("Submitting transaction", "number", i, "from", ctx.ethA.Client.Opts.From, "handler", ctx.ethA.BaseContracts.ERC721HandlerAddress.String(), "tokenId", tok.Id.String())
-			eth.CreateErc721Deposit(t, ctx.ethA.Client, SubChainId, subRecipient, tok.Id, ctx.ethA.BaseContracts, ctx.EthSubErc721ResourceId)
+			depositKey := eth.CreateErc721Deposit(t, ctx.ethA.Client, SubChainId, subRecipient, subRecipient, tok.Id, ctx.ethA.BaseContracts, ctx.EthSubErc721ResourceId)
 
 			// Wait for event
-			sub.WaitForProposalSuccessOrFail(t, ctx.subClient, types.NewU64(nonce), types.U8(EthAChainId))
-			nonce++
+			sub.WaitForProposalSuccessOrFail(t, ctx.subClient, types.Bytes32(depositKey))
+			//nonce++
 
 			// Verify substrate ownership and metadata
 			subtest.AssertOwnerOf(t, ctx.subClient, tok.Id, types.NewAccountID(subRecipient))
@@ -52,7 +53,7 @@ func testErc721ToSubstrateRoundTrip(t *testing.T, ctx *testContext) {
 		}
 	}
 
-	nonce = subtest.GetDepositNonce(t, ctx.subClient, EthAChainId) + 1
+	//nonce = subtest.GetDepositNonce(t, ctx.subClient) + 1
 	for i := 1; i <= numberOfTxs; i++ {
 		i := i // for scope
 		ok := t.Run(fmt.Sprintf("Transfer %d", i), func(t *testing.T) {
@@ -60,12 +61,12 @@ func testErc721ToSubstrateRoundTrip(t *testing.T, ctx *testContext) {
 			tok := tokens[i-1]
 
 			// Execute transfer
-			subtest.InitiateNonFungibleTransfer(t, ctx.subClient, types.NewU256(*tok.Id), ethRecipient.Bytes(), EthAChainId)
+			depositKey := msg.Bytes32(subtest.InitiateNonFungibleTransfer(t, ctx.subClient, types.NewU256(*tok.Id), ethRecipient.Bytes(), EthAChainId))
 
 			// Wait for event
-			eth.WaitForProposalActive(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress, nonce)
-			eth.WaitForProposalExecutedEvent(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress, nonce)
-			nonce++
+			eth.WaitForProposalActive(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress, depositKey)
+			eth.WaitForProposalExecutedEvent(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress, depositKey)
+			//nonce++
 
 			// Verify ownership and intact metadata
 			ethtest.Erc721AssertOwner(t, ctx.ethA.Client, ctx.ethA.TestContracts.Erc721Sub, tok.Id, ethRecipient)
@@ -89,7 +90,7 @@ func testErc721EthToEthRoundTrip(t *testing.T, ctx *testContext) {
 	ethtest.Erc721MintMany(t, ctx.ethA.Client, ctx.ethA.TestContracts.Erc721Eth, tokens)
 	ethtest.Erc721ApproveMany(t, ctx.ethA.Client, ctx.ethA.TestContracts.Erc721Eth, ctx.ethA.BaseContracts.ERC721HandlerAddress, tokens)
 
-	nonce := ethtest.GetDepositNonce(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress, EthBChainId) + 1
+	//nonce := ethtest.GetDepositNonce(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress) + 1
 	for i := 1; i <= numberOfTxs; i++ {
 		i := i // for scope
 		ok := t.Run(fmt.Sprintf("Transfer ethA to ethB %d", i), func(t *testing.T) {
@@ -104,12 +105,12 @@ func testErc721EthToEthRoundTrip(t *testing.T, ctx *testContext) {
 
 			// Initiate transfer
 			log.Info("Submitting transaction", "number", i, "recipient", ethBRecipient, "resourcId", ctx.EthEthErc721ResourceId.Hex(), "tokenId", tok.Id.String(), "from", ctx.ethA.Client.Opts.From, "handler", ctx.ethA.BaseContracts.ERC721HandlerAddress)
-			eth.CreateErc721Deposit(t, ctx.ethA.Client, EthBChainId, ethBRecipient.Bytes(), tok.Id, ctx.ethA.BaseContracts, ctx.EthEthErc721ResourceId)
+			depositKey := eth.CreateErc721Deposit(t, ctx.ethA.Client, EthBChainId, ethARecipient.Bytes(), ethBRecipient.Bytes(), tok.Id, ctx.ethA.BaseContracts, ctx.EthEthErc721ResourceId)
 
 			// Wait for proposal events
-			eth.WaitForProposalActive(t, ctx.ethB.Client, ctx.ethB.BaseContracts.BridgeAddress, nonce)
-			eth.WaitForProposalExecutedEvent(t, ctx.ethB.Client, ctx.ethB.BaseContracts.BridgeAddress, nonce)
-			nonce++
+			eth.WaitForProposalActive(t, ctx.ethB.Client, ctx.ethB.BaseContracts.BridgeAddress, depositKey)
+			eth.WaitForProposalExecutedEvent(t, ctx.ethB.Client, ctx.ethB.BaseContracts.BridgeAddress, depositKey)
+			//nonce++
 
 			// Verify ownership on ethB
 			ethtest.Erc721AssertOwner(t, ctx.ethB.Client, ctx.ethB.TestContracts.Erc721Eth, tok.Id, ethBRecipient)
@@ -126,7 +127,7 @@ func testErc721EthToEthRoundTrip(t *testing.T, ctx *testContext) {
 	// Aprove handler to now move the tokens
 	ethtest.Erc721ApproveMany(t, ctx.ethB.Client, ctx.ethB.TestContracts.Erc721Eth, ctx.ethB.BaseContracts.ERC721HandlerAddress, tokens)
 
-	nonce = ethtest.GetDepositNonce(t, ctx.ethB.Client, ctx.ethB.BaseContracts.BridgeAddress, EthAChainId) + 1
+	//nonce = ethtest.GetDepositNonce(t, ctx.ethB.Client, ctx.ethB.BaseContracts.BridgeAddress) + 1
 	for i := 1; i <= numberOfTxs; i++ {
 		i := i // for scope
 		ok := t.Run(fmt.Sprintf("Transfer ethB to ethA %d", i), func(t *testing.T) {
@@ -134,12 +135,12 @@ func testErc721EthToEthRoundTrip(t *testing.T, ctx *testContext) {
 
 			// Initiate transfer
 			log.Info("Submitting transaction", "number", i, "recipient", ethBRecipient, "resourceId", ctx.EthEthErc721ResourceId.Hex(), "tokenId", tok.Id.String(), "from", ctx.ethB.Client.Opts.From, "handler", ctx.ethB.BaseContracts.ERC721HandlerAddress)
-			eth.CreateErc721Deposit(t, ctx.ethB.Client, EthAChainId, ethARecipient.Bytes(), tok.Id, ctx.ethB.BaseContracts, ctx.EthEthErc721ResourceId)
+			depositKey := eth.CreateErc721Deposit(t, ctx.ethB.Client, EthAChainId, ethARecipient.Bytes(), ethARecipient.Bytes(), tok.Id, ctx.ethB.BaseContracts, ctx.EthEthErc721ResourceId)
 
 			// Wait for proposal events
-			eth.WaitForProposalActive(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress, nonce)
-			eth.WaitForProposalExecutedEvent(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress, nonce)
-			nonce++
+			eth.WaitForProposalActive(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress, depositKey)
+			eth.WaitForProposalExecutedEvent(t, ctx.ethA.Client, ctx.ethA.BaseContracts.BridgeAddress, depositKey)
+			//nonce++
 
 			// Verify ownership and metadata on ethA
 			ethtest.Erc721AssertOwner(t, ctx.ethA.Client, ctx.ethA.TestContracts.Erc721Eth, tok.Id, ethARecipient)

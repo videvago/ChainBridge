@@ -11,9 +11,6 @@ import (
 	"time"
 
 	"github.com/ChainSafe/ChainBridge/bindings/Bridge"
-	"github.com/ChainSafe/ChainBridge/bindings/ERC20Handler"
-	"github.com/ChainSafe/ChainBridge/bindings/ERC721Handler"
-	"github.com/ChainSafe/ChainBridge/bindings/GenericHandler"
 	utils "github.com/ChainSafe/ChainBridge/shared/ethereum"
 	ethtest "github.com/ChainSafe/ChainBridge/shared/ethereum/testing"
 	"github.com/ChainSafe/chainbridge-utils/blockstore"
@@ -51,22 +48,10 @@ func createTestListener(t *testing.T, config *Config, contracts *utils.DeployedC
 	if err != nil {
 		t.Fatal(err)
 	}
-	erc20HandlerContract, err := ERC20Handler.NewERC20Handler(newConfig.erc20HandlerContract, conn.Client())
-	if err != nil {
-		t.Fatal(err)
-	}
-	erc721HandlerContract, err := ERC721Handler.NewERC721Handler(newConfig.erc721HandlerContract, conn.Client())
-	if err != nil {
-		t.Fatal(err)
-	}
-	genericHandlerContract, err := GenericHandler.NewGenericHandler(newConfig.genericHandlerContract, conn.Client())
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	router := &MockRouter{msgs: make(chan msg.Message)}
 	listener := NewListener(conn, &newConfig, TestLogger, &blockstore.EmptyStore{}, stop, sysErr, nil)
-	listener.setContracts(bridgeContract, erc20HandlerContract, erc721HandlerContract, genericHandlerContract)
+	listener.setContracts(bridgeContract)
 	listener.setRouter(router)
 	// Start the listener
 	err = listener.start()
@@ -121,18 +106,20 @@ func TestListener_Erc20DepositedEvent(t *testing.T) {
 	amount := big.NewInt(10)
 	src := msg.ChainId(0)
 	dst := msg.ChainId(1)
-	resourceId := msg.ResourceIdFromSlice(append(common.LeftPadBytes(erc20Contract.Bytes(), 31), uint8(src)))
+	resourceId := msg.Bytes32FromSlice(append(common.LeftPadBytes(erc20Contract.Bytes(), 31), uint8(src)))
+	depositKey := msg.Bytes32FromSlice(make([]byte, 32))
 	recipient := ethcrypto.PubkeyToAddress(BobKp.PrivateKey().PublicKey)
+	data := utils.ConstructErc20DepositData(common.HexToAddress(BobKp.Address()).Bytes(), amount)
 
 	ethtest.RegisterResource(t, client, contracts.BridgeAddress, contracts.ERC20HandlerAddress, resourceId, erc20Contract)
 
-	expectedMessage := msg.NewFungibleTransfer(
+	expectedMessage := msg.NewGenericTransfer(
 		src,
 		dst,
 		1,
-		amount,
+		depositKey,
 		resourceId,
-		common.HexToAddress(BobKp.Address()).Bytes(),
+		data,
 	)
 	// Create an ERC20 Deposit
 	createErc20Deposit(
@@ -140,7 +127,7 @@ func TestListener_Erc20DepositedEvent(t *testing.T) {
 		l.bridgeContract,
 		client,
 		resourceId,
-
+		recipient,
 		recipient,
 		dst,
 		amount,
@@ -149,20 +136,20 @@ func TestListener_Erc20DepositedEvent(t *testing.T) {
 	verifyMessage(t, router, expectedMessage, errs)
 
 	// Create second deposit, verify nonce change
-	expectedMessage = msg.NewFungibleTransfer(
+	expectedMessage = msg.NewGenericTransfer(
 		src,
 		dst,
 		2,
-		amount,
+		depositKey,
 		resourceId,
-		common.HexToAddress(BobKp.Address()).Bytes(),
+		data,
 	)
 	createErc20Deposit(
 		t,
 		l.bridgeContract,
 		client,
 		resourceId,
-
+		recipient,
 		recipient,
 		dst,
 		amount,
@@ -189,19 +176,20 @@ func TestListener_Erc721DepositedEvent(t *testing.T) {
 	ethtest.Erc721AssertOwner(t, client, erc721Contract, tokenId, client.Opts.From)
 	src := msg.ChainId(0)
 	dst := msg.ChainId(1)
-	resourceId := msg.ResourceIdFromSlice(append(common.LeftPadBytes(erc721Contract.Bytes(), 31), uint8(src)))
-	recipient := BobKp.CommonAddress()
+	resourceId := msg.Bytes32FromSlice(append(common.LeftPadBytes(erc721Contract.Bytes(), 31), uint8(src)))
+	depositKey := msg.Bytes32FromSlice(make([]byte, 32))
+	recipient := ethcrypto.PubkeyToAddress(BobKp.PrivateKey().PublicKey)
+	data := utils.ConstructErc721DepositData(tokenId, recipient.Bytes())
 
 	ethtest.RegisterResource(t, client, contracts.BridgeAddress, contracts.ERC721HandlerAddress, resourceId, erc721Contract)
 
-	expectedMessage := msg.NewNonFungibleTransfer(
+	expectedMessage := msg.NewGenericTransfer(
 		src,
 		dst,
 		1,
+		depositKey,
 		resourceId,
-		tokenId,
-		recipient.Bytes(),
-		[]byte{},
+		data,
 	)
 
 	// Create an ERC20 Deposit
@@ -210,7 +198,7 @@ func TestListener_Erc721DepositedEvent(t *testing.T) {
 		l.bridgeContract,
 		client,
 		resourceId,
-
+		recipient,
 		recipient,
 		dst,
 		tokenId,
@@ -219,7 +207,7 @@ func TestListener_Erc721DepositedEvent(t *testing.T) {
 	verifyMessage(t, router, expectedMessage, errs)
 }
 
-func TestListener_GenericDepositedEvent(t *testing.T) {
+/*func TestListener_GenericDepositedEvent(t *testing.T) {
 	client := ethtest.NewClient(t, TestEndpoint, AliceKp)
 	contracts := deployTestContracts(t, client, aliceTestConfig.id)
 	errs := make(chan error)
@@ -231,14 +219,15 @@ func TestListener_GenericDepositedEvent(t *testing.T) {
 	src := msg.ChainId(0)
 	dst := msg.ChainId(1)
 	hash := utils.Hash(common.LeftPadBytes([]byte{1}, 32))
-	resourceId := msg.ResourceIdFromSlice(append(common.LeftPadBytes([]byte{1}, 31), uint8(src)))
-	depositSig := utils.CreateFunctionSignature("")
-	executeSig := utils.CreateFunctionSignature("store()")
-	ethtest.RegisterGenericResource(t, client, contracts.BridgeAddress, contracts.GenericHandlerAddress, resourceId, utils.ZeroAddress, depositSig, executeSig)
+	resourceId := msg.Bytes32FromSlice(append(common.LeftPadBytes([]byte{1}, 31), uint8(src)))
+        depositKey := msg.Bytes32FromSlice(make([]byte, 32))
+
+        ethtest.RegisterResource(t, client, contracts.BridgeAddress, contracts.GenericHandlerAddress, resourceId, ?????)
 
 	expectedMessage := msg.NewGenericTransfer(
 		src,
 		dst,
+		Executor,
 		1,
 		resourceId,
 		hash[:],
@@ -256,7 +245,7 @@ func TestListener_GenericDepositedEvent(t *testing.T) {
 	)
 
 	verifyMessage(t, router, expectedMessage, errs)
-}
+}*/
 
 func compareMessage(expected, actual msg.Message) error {
 	if !reflect.DeepEqual(expected, actual) {

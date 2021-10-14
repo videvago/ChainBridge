@@ -49,7 +49,7 @@ func CreateConfig(key string, chain msg.ChainId) *core.ChainConfig {
 	}
 }
 
-func WaitForProposalSuccessOrFail(t *testing.T, client *utils.Client, nonce types.U64, chain types.U8) {
+func WaitForProposalSuccessOrFail(t *testing.T, client *utils.Client, depositKey types.Bytes32) {
 	key, err := types.CreateStorageKey(client.Meta, "System", "Events", nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -81,20 +81,23 @@ func WaitForProposalSuccessOrFail(t *testing.T, client *utils.Client, nonce type
 				}
 
 				for _, evt := range events.ChainBridge_ProposalSucceeded {
-					if evt.DepositNonce == nonce && evt.SourceId == chain {
-						log.Info("Proposal succeeded", "depositNonce", evt.DepositNonce, "source", evt.SourceId)
+					if evt.DepositKey == depositKey {
+						log.Info("Proposal succeeded", "depositKey", evt.DepositKey)
 						return
 					} else {
-						log.Info("Found mismatched success event", "depositNonce", evt.DepositNonce, "source", evt.SourceId)
+						log.Info("Found mismatched success event", "depositKey", evt.DepositKey)
 					}
 				}
 
 				for _, evt := range events.ChainBridge_ProposalFailed {
-					if evt.DepositNonce == nonce && evt.SourceId == chain {
-						log.Info("Proposal failed", "depositNonce", evt.DepositNonce, "source", evt.SourceId)
-						t.Fatalf("Proposal failed. Nonce: %d Source: %d", evt.DepositNonce, evt.SourceId)
+					if evt.DepositKey == depositKey {
+						log.Info("Proposal failed", "depositKey", evt.DepositKey)
+						hex, err := types.Hex(evt.DepositKey)
+						if err != nil {
+							t.Fatalf("Proposal failed. depositKey: %s", hex)
+						}
 					} else {
-						log.Info("Found mismatched fail event", "depositNonce", evt.DepositNonce, "source", evt.SourceId)
+						log.Info("Found mismatched fail event", "depositKey", evt.DepositKey)
 					}
 				}
 			}

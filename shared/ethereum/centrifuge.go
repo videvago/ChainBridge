@@ -19,7 +19,7 @@ func DeployAssetStore(client *Client) (common.Address, error) {
 		return ZeroAddress, err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return ZeroAddress, err
 	}

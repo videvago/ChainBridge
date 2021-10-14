@@ -25,7 +25,7 @@ func DeployMintApproveErc20(client *Client, erc20Handler common.Address, amount 
 		return ZeroAddress, err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -43,7 +43,7 @@ func DeployMintApproveErc20(client *Client, erc20Handler common.Address, amount 
 		return ZeroAddress, err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -61,7 +61,7 @@ func DeployMintApproveErc20(client *Client, erc20Handler common.Address, amount 
 		return ZeroAddress, err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -83,7 +83,7 @@ func DeployAndMintErc20(client *Client, amount *big.Int) (common.Address, error)
 		return ZeroAddress, err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -100,7 +100,7 @@ func DeployAndMintErc20(client *Client, amount *big.Int) (common.Address, error)
 		return ZeroAddress, err
 	}
 
-	err = WaitForTx(client, mintTx)
+	_, err = WaitForTx(client, mintTx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -126,7 +126,7 @@ func Erc20Approve(client *Client, erc20Contract, recipient common.Address, amoun
 		return err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func FundErc20Handler(client *Client, handlerAddress, erc20Address common.Addres
 		return err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func Erc20AddMinter(client *Client, erc20Contract, handler common.Address) error
 		return err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return err
 	}
@@ -221,13 +221,13 @@ func Erc20GetAllowance(client *Client, erc20Contract, owner, spender common.Addr
 	return amount, nil
 }
 
-func Erc20GetResourceId(client *Client, handler common.Address, rId msg.ResourceId) (common.Address, error) {
+func Erc20GetResourceId(client *Client, handler common.Address, rId msg.Bytes32) (common.Address, error) {
 	instance, err := ERC20Handler.NewERC20Handler(handler, client.Client)
 	if err != nil {
 		return ZeroAddress, err
 	}
 
-	addr, err := instance.ResourceIDToTokenContractAddress(client.CallOpts, rId)
+	addr, err := instance.ResourceIDToContractAddress(client.CallOpts, rId)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -251,7 +251,7 @@ func Erc20Mint(client *Client, erc20Address, recipient common.Address, amount *b
 		return err
 	}
 
-	err = WaitForTx(client, tx)
+	_, err = WaitForTx(client, tx)
 	if err != nil {
 		return err
 	}
