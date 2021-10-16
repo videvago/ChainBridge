@@ -194,9 +194,15 @@ func (w *writer) voteProposal(m msg.Message) {
 			gasLimit := w.conn.Opts().GasLimit
 			gasPrice := w.conn.Opts().GasPrice
 
+			// TODO: signature here
+			v := [32]byte{}
+			r := [32]byte{}
+			s := [32]byte{}
+
 			tx, err := w.bridgeContract.VoteProposal(
 				w.conn.Opts(),
 				m.DepositKey,
+				v, r, s,
 			)
 			w.conn.UnlockOpts()
 
@@ -242,15 +248,9 @@ func (w *writer) executeProposal(m msg.Message) {
 			gasLimit := w.conn.Opts().GasLimit
 			gasPrice := w.conn.Opts().GasPrice
 
-			// ToDo: Sign the data here and append rsv as 32 byte values
-			fakeSig := [96]byte{}
-			payload := append(fakeSig[:], m.Payload[0].([]byte)...)
-
 			tx, err := w.bridgeContract.ExecuteProposal(
 				w.conn.Opts(),
-				uint8(m.Source),
-				uint64(m.DepositNonce),
-				payload,
+				m.Payload[0].([]byte),
 			)
 			w.conn.UnlockOpts()
 
