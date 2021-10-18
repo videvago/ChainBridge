@@ -12,6 +12,7 @@ import (
 	utils "github.com/ChainSafe/ChainBridge/shared/ethereum"
 	"github.com/ChainSafe/chainbridge-utils/msg"
 	log "github.com/ChainSafe/log15"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 )
 
 // Number of blocks to wait for an finalization event
@@ -194,10 +195,30 @@ func (w *writer) voteProposal(m msg.Message) {
 			gasLimit := w.conn.Opts().GasLimit
 			gasPrice := w.conn.Opts().GasPrice
 
+			// Get private key
+			pk := w.conn.Keypair().PrivateKey()
+
+			// Data to sign
+			dataToSign := m.Payload[0].([]byte)
+
+			// Hash the data
+			hashData := ethCrypto.Keccak256Hash(dataToSign)
+
+			// Sign the data
+			signature, signErr := ethCrypto.Sign(hashData.Bytes(), pk)
+
+			if signErr != nil {
+				w.log.Error("Failed to sign data", "signErr", signErr)
+			}
+
 			// TODO: signature here
-			v := [32]byte{}
-			r := [32]byte{}
-			s := [32]byte{}
+			var r [32]byte
+			var s [32]byte
+			var v [32]byte
+
+			copy(r[:], signature[:32])
+			copy(s[:], signature[32:64])
+			copy(v[:], signature[64:])
 
 			tx, err := w.bridgeContract.VoteProposal(
 				w.conn.Opts(),
