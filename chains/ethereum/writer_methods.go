@@ -218,7 +218,7 @@ func (w *writer) voteProposal(m msg.Message) {
 
 			copy(r[:], signature[:32])
 			copy(s[:], signature[32:64])
-			copy(v[:], signature[64:])
+			copy(v[31:], signature[64:])
 
 			tx, err := w.bridgeContract.VoteProposal(
 				w.conn.Opts(),
