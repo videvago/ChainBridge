@@ -80,12 +80,29 @@ func deployBridge(client *Client, chainID uint8, relayerAddrs []common.Address, 
 		return ZeroAddress, err
 	}
 
-	bridgeAddr, tx, _, err := bridge.DeployBridge(client.Opts, client.Client, chainID, relayerAddrs, initialRelayerThreshold, big.NewInt(0), big.NewInt(100))
+	bridgeAddr, tx, bridgeInstance, err := bridge.DeployBridge(client.Opts, client.Client)
 	if err != nil {
 		return ZeroAddress, err
 	}
 
 	_, err = WaitForTx(client, tx)
+	if err != nil {
+		return ZeroAddress, err
+	}
+	client.UnlockNonce()
+
+	// Initialize
+	err = client.LockNonceAndUpdate()
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	initTx, err := bridgeInstance.Initialize(client.Opts, chainID, relayerAddrs, initialRelayerThreshold, big.NewInt(0), big.NewInt(100))
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	_, err = WaitForTx(client, initTx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -102,12 +119,30 @@ func deployERC20Handler(client *Client, bridgeAddress common.Address) (common.Ad
 		return ZeroAddress, err
 	}
 
-	erc20HandlerAddr, tx, _, err := erc20Handler.DeployERC20Handler(client.Opts, client.Client, bridgeAddress, [][32]byte{}, []common.Address{}, [][32]byte{})
+	erc20HandlerAddr, tx, bridgeInstance, err := erc20Handler.DeployERC20Handler(client.Opts, client.Client)
 	if err != nil {
 		return ZeroAddress, err
 	}
 
 	_, err = WaitForTx(client, tx)
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	client.UnlockNonce()
+
+	// Initialize
+	err = client.LockNonceAndUpdate()
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	initTx, err := bridgeInstance.Initialize(client.Opts, bridgeAddress, [][32]byte{}, []common.Address{}, [][32]byte{})
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	_, err = WaitForTx(client, initTx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -123,11 +158,29 @@ func deployERC721Handler(client *Client, bridgeAddress common.Address) (common.A
 		return ZeroAddress, err
 	}
 
-	erc721HandlerAddr, tx, _, err := erc721Handler.DeployERC721Handler(client.Opts, client.Client, bridgeAddress, [][32]byte{}, []common.Address{}, [][32]byte{})
+	erc721HandlerAddr, tx, bridgeInstance, err := erc721Handler.DeployERC721Handler(client.Opts, client.Client)
 	if err != nil {
 		return ZeroAddress, err
 	}
 	_, err = WaitForTx(client, tx)
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	client.UnlockNonce()
+
+	// Initialize
+	err = client.LockNonceAndUpdate()
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	initTx, err := bridgeInstance.Initialize(client.Opts, bridgeAddress, [][32]byte{}, []common.Address{}, [][32]byte{})
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	_, err = WaitForTx(client, initTx)
 	if err != nil {
 		return ZeroAddress, err
 	}
@@ -143,12 +196,30 @@ func deployGenericHandler(client *Client, bridgeAddress common.Address) (common.
 		return ZeroAddress, err
 	}
 
-	addr, tx, _, err := GenericHandler.DeployGenericHandler(client.Opts, client.Client, bridgeAddress, [][32]byte{}, []common.Address{}, [][32]byte{})
+	addr, tx, bridgeInstance, err := GenericHandler.DeployGenericHandler(client.Opts, client.Client)
 	if err != nil {
 		return ZeroAddress, err
 	}
 
 	_, err = WaitForTx(client, tx)
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	client.UnlockNonce()
+
+	// Initialize
+	err = client.LockNonceAndUpdate()
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	initTx, err := bridgeInstance.Initialize(client.Opts, bridgeAddress, [][32]byte{}, []common.Address{}, [][32]byte{})
+	if err != nil {
+		return ZeroAddress, err
+	}
+
+	_, err = WaitForTx(client, initTx)
 	if err != nil {
 		return ZeroAddress, err
 	}
