@@ -169,7 +169,7 @@ func run(ctx *cli.Context) error {
 	sysErr := make(chan error)
 	c := core.NewCore(sysErr)
 
-	chains := make(map[string]*ethereum.Chain)
+	ethChains := make(map[string]*ethereum.Chain)
 
 	for _, chain := range cfg.Chains {
 		chainId, errr := strconv.Atoi(chain.Id)
@@ -198,12 +198,10 @@ func run(ctx *cli.Context) error {
 		}
 
 		if chain.Type == "ethereum" {
-			var ethChain *ethereum.Chain
-			ethChain, err = ethereum.InitializeChain(chainConfig, logger, sysErr, m)
-			chains[chain.Id] = ethChain
-			newChain = ethChain
+			ethChains[chain.Id], err = ethereum.InitializeChain(chainConfig, logger, sysErr, m)
 		} else if chain.Type == "substrate" {
 			newChain, err = substrate.InitializeChain(chainConfig, logger, sysErr, m)
+			c.AddChain(newChain)
 		} else {
 			return errors.New("unrecognized Chain Type")
 		}
@@ -211,10 +209,14 @@ func run(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		c.AddChain(newChain)
 	}
 	// POC: Vote / execute on Rinkeby for Goerli TX
-	chains["0"].SetWriter(chains["1"])
+	ethChains["0"].SetWriter(ethChains["2"])
+	ethChains["1"].SetWriter(ethChains["2"])
+
+	for _, chain := range ethChains {
+		c.AddChain(core.Chain(chain))
+	}
 
 	// Start prometheus and health server
 	if ctx.Bool(config.MetricsFlag.Name) {
